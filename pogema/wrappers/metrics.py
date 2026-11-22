@@ -12,11 +12,14 @@ class AbstractMetric(Wrapper):
         super().__init__(env)
         self._current_step = 0
 
+    def _goal_state(self):
+        return self.was_on_goal
+
     def step(self, action):
         obs, reward, terminated, truncated, infos = self.env.step(action)
         finished = all(truncated) or all(terminated)
 
-        metric = self._compute_stats(self._current_step, self.was_on_goal, finished)
+        metric = self._compute_stats(self._current_step, self._goal_state(), finished)
         self._current_step += 1
         if finished:
             self._current_step = 0
@@ -45,14 +48,19 @@ class LifeLongAverageThroughputMetric(AbstractMetric):
             return result
 
 
-class NonDisappearCSRMetric(AbstractMetric):
+class FinalGoalMetric(AbstractMetric):
+    def _goal_state(self):
+        return self.is_on_goal
+
+
+class NonDisappearCSRMetric(FinalGoalMetric):
 
     def _compute_stats(self, step, is_on_goal, finished):
         if finished:
             return {'CSR': float(all(is_on_goal))}
 
 
-class NonDisappearISRMetric(AbstractMetric):
+class NonDisappearISRMetric(FinalGoalMetric):
 
     def _compute_stats(self, step, is_on_goal, finished):
         if finished:

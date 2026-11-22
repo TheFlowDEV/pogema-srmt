@@ -2,6 +2,7 @@ import re
 import time
 
 import numpy as np
+import pytest
 from tabulate import tabulate
 
 from pogema import pogema_v0, AnimationMonitor
@@ -78,6 +79,41 @@ def test_metrics():
     *_, infos = run_episode(GridConfig(num_agents=5, seed=5, size=5, max_episode_steps=64))[-1]
     assert np.isclose(infos[0]['metrics']['CSR'], 0.0)
     assert np.isclose(infos[0]['metrics']['ISR'], 0.2)
+
+
+@pytest.mark.parametrize('on_target', ['finish', 'nothing'])
+@pytest.mark.parametrize(
+    'second_agent_actions, expected_isr, expected_csr',
+    [
+        pytest.param([ActionMapping.right], 1.0, 1.0, id='both-reach-immediately'),
+        pytest.param([ActionMapping.noop, ActionMapping.right], 1.0, 1.0, id='one-reaches-later'),
+        pytest.param([ActionMapping.noop] * 5, 0.5, 0.0, id='one-reaches-before-timeout'),
+    ],
+)
+def test_metrics_count_each_agent_once(monkeypatch, on_target, second_agent_actions, expected_isr, expected_csr):
+    env = pogema_v0(GridConfig(
+        map='aA.\nbB.',
+        on_target=on_target,
+        max_episode_steps=5,
+        integration='SampleFactory',
+        auto_reset=False,
+    ))
+    # These scenarios exercise movement and metrics without generating observations.
+    monkeypatch.setattr(env.unwrapped, '_obs', lambda: [None, None])
+    env.reset()
+
+    for step, second_action in enumerate(second_agent_actions):
+        first_action = ActionMapping.right if step == 0 else ActionMapping.noop
+        _, _, terminated, truncated, infos = env.step([first_action, second_action])
+        assert infos[0]['is_active']
+        assert env.unwrapped.grid.on_goal(0)
+        finished = all(terminated) or all(truncated)
+        assert finished == (step == len(second_agent_actions) - 1)
+
+    assert infos[0]['metrics']['ISR'] == expected_isr
+    assert infos[0]['metrics']['CSR'] == expected_csr
+    assert infos[0]['episode_extra_stats']['ISR'] == expected_isr
+    assert infos[0]['episode_extra_stats']['CSR'] == expected_csr
 
 
 def test_standard_pogema():

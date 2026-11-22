@@ -415,6 +415,7 @@ class PogemaCoopFinish(Pogema):
         action = self.move_agents(action)
         self.action = action
         self.update_was_on_goal()
+        self.is_on_goal = self.was_on_goal
 
         is_task_solved = all(self.was_on_goal)
         for agent_idx in range(self.grid_config.num_agents):
@@ -704,8 +705,8 @@ def _make_pogema(grid_config):
             env = NonDisappearEpLengthMetric(env)
             env = SumOfCostsAndMakespanMetric(env)
         elif grid_config.on_target == 'finish':
-            env = ISRMetric(env)
-            env = CSRMetric(env)
+            env = NonDisappearISRMetric(env)
+            env = NonDisappearCSRMetric(env)
             env = EpLengthMetric(env)
             env = SumOfCostsAndMakespanMetric(env)
         elif grid_config.on_target == 't-maze':
