@@ -38,12 +38,20 @@ class LifeLongAverageThroughputMetric(AbstractMetric):
         super().__init__(env)
         self._solved_instances = 0
 
+    def _goal_state(self):
+        return self.is_on_goal
+
+    def reset(self, **kwargs):
+        self._solved_instances = 0
+        self._current_step = 0
+        return self.env.reset(**kwargs)
+
     def _compute_stats(self, step, is_on_goal, finished):
         for agent_idx, on_goal in enumerate(is_on_goal):
             if on_goal:
                 self._solved_instances += 1
         if finished:
-            result = {'avg_throughput': self._solved_instances / self.grid_config.max_episode_steps}
+            result = {'avg_throughput': self._solved_instances / max(1, step + 1)}
             self._solved_instances = 0
             return result
 

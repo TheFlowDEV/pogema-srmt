@@ -370,14 +370,16 @@ class PogemaLifeLong(Pogema):
         self.action = action
         
 
+        reached = []
         for agent_idx in range(self.grid_config.num_agents):
             on_goal = self.grid.on_goal(agent_idx)
+            reached.append(on_goal)
             if on_goal and self.grid.is_active[agent_idx]:
                 rewards.append(1.0)
             else:
                 rewards.append(0.0)
 
-            if self.grid.on_goal(agent_idx):
+            if on_goal:
                 self.grid.finishes_xy[agent_idx] = self._generate_new_target(agent_idx)
 
         for agent_idx in range(self.grid_config.num_agents):
@@ -392,7 +394,7 @@ class PogemaLifeLong(Pogema):
 
         terminated = [False] * self.grid_config.num_agents
         truncated = [False] * self.grid_config.num_agents
-        self.is_on_goal = [self.grid.on_goal(agent_idx) for agent_idx in range(self.grid_config.num_agents)]
+        self.is_on_goal = reached
         
         return obs, rewards, terminated, truncated, infos
 
